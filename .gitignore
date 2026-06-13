@@ -1,0 +1,27 @@
+# 大型資料集 (各自從官方來源下載,見 datasets/download.sh 與 kaggle/README.md)
+data/
+datasets/*.zip
+
+# 建置/轉換產物 (可由 make 重生)
+artifacts/
+kneron_flow/
+work_dirs/
+
+# Kaggle 上架暫存與打包 zip (由 make kaggle-pack / setup_kaggle.sh 重生)
+kaggle/_*/
+kaggle/*.zip
+
+# Python
+__pycache__/
+*.pyc
+
+# 模型/中間檔
+*.nef
+*.bie
+*.onnx
+*.pth
+
+# 系統垃圾
+.DS_Store
+__MACOSX/
+*.scratch
