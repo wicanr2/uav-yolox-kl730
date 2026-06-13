@@ -2,6 +2,38 @@
 
 無人機掛載熱像儀,機上以 KL730 NPU 即時辨識 **uav / person / vehicle / bicycle**。
 
+## 這是什麼專案:算法 + 硬體的「系統整合」應用
+
+本專案**不是算法研發** —— 演算法 (YOLOX) 與 AI 晶片 (Kneron KL730) 都是現成的;
+我們做的是把 **演算法 + 邊緣 AI 硬體 + 熱影像資料 + 部署流程**「兜起來能在無人機上即時跑」。
+這是典型的**系統整合 (systems integration)**:不發明新算法,而是讓既有元件在真實場景協同運作。
+
+```
+   熱像儀 ──▶ YOLOX (現成算法) ──▶ KL730 NPU (現成硬體) ──▶ 即時辨識結果
+              └────────── 我們做的:整合、量化、部署、驗證 ──────────┘
+```
+
+### 要辨識的目標 (資料集標註示意)
+
+系統要在熱影像中辨識的目標 —— 以下為訓練資料集的人工標註,展示任務本身:
+
+| 空對空:辨識無人機 (UAV) | 空對地:辨識人 / 車 |
+|---|---|
+| <img src="docs/images/task/airair_uav_9.png" width="380"> | <img src="docs/images/task/airground_2295.png" width="380"> |
+| ThermalUAV2UAV 熱影像,紅框為 UAV | HIT-UAV 熱影像,綠=person 藍=vehicle |
+
+### 整合成果 (目前狀態)
+
+| 整合環節 | 成果 |
+|---|---|
+| 演算法 → KL730 編譯 | ✅ NEF 可執行檔產出,**模擬 43.2 fps、零 CPU fallback** (整張圖全在 NPU) |
+| INT8 量化 | ✅ 通過 (逐 channel corr 0.90–0.97;關鍵:raw-logit 須用 mmse range method) |
+| 端到端推論鏈 | ✅ 熱影像 → NPU 推論 → decode+NMS → 出框,全鏈可跑 (`docs/images/demo/`) |
+| 正式辨識精度 | ⏳ 待熱影像訓練 (目前 demo 用 COCO 預訓練權重驗證 pipeline,精準辨識需在熱影像上 fine-tune;見 [walkthrough §7.5](docs/session-walkthrough.md)) |
+
+> 註:現有 `docs/images/demo/` 是「pipeline 實證」而非「精準辨識成果」—— 用通用 COCO 模型跑熱影像,
+> domain gap 大、偵測弱,這正說明了為什麼需要熱影像訓練 (Kaggle 那一步)。訓練後將更新真實辨識結果。
+
 ## 📚 想理解整個專案?從這裡開始
 
 > **[docs/KB/00-學習地圖.md](docs/KB/00-學習地圖.md)** ← 分層知識庫入口(由淺入深,照你想懂的深度讀)
