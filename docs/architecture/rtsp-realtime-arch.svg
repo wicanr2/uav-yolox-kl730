@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" font-family="'Noto Sans CJK TC','Microsoft JhengHei',sans-serif">
+  <style>
+    .t{fill:#222} .lbl{fill:#444;font-size:12px} .sub{fill:#666;font-size:11px}
+    .box{fill:#fff;stroke:#bbb;stroke-width:1.5;rx:8}
+    .npu{fill:#fff3e6;stroke:#e8821a;stroke-width:2}
+    .cpu{fill:#eef4fb;stroke:#4a78b5;stroke-width:1.5}
+    .cam{fill:#f3fbf3;stroke:#3a9a4a;stroke-width:2}
+    .out{fill:#faf7ff;stroke:#7a5cb0;stroke-width:1.5}
+    .h{font-size:13px;font-weight:bold;fill:#222}
+    .tag{font-size:10px;font-weight:bold}
+    .flow{stroke:#888;stroke-width:2;fill:none;marker-end:url(#a)}
+  </style>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L7,3 L0,6 z" fill="#888"/></marker></defs>
+
+  <text x="24" y="34" font-size="20" font-weight="bold" class="t">UAV2UAV 即時辨識架構 — 拓樸 A(機上 IP 熱像儀 + 機內 Ethernet)</text>
+  <text x="24" y="56" class="sub">熱像儀裝機上,經機內有線 Ethernet 出 RTSP;KL730 機上拉流 → NPU 推論 → 結果下傳飛控。延遲 ~80–130ms(編解碼主宰,非網路)。</text>
+
+  <!-- Camera -->
+  <rect class="box cam" x="24" y="90" width="190" height="150" rx="8"/>
+  <text x="119" y="116" text-anchor="middle" class="h">熱像 IP 相機</text>
+  <text x="119" y="138" text-anchor="middle" class="tag" fill="#3a9a4a">Workswell WIRIS Pro</text>
+  <text x="34" y="162" class="sub">• 640×512 LWIR @30Hz</text>
+  <text x="34" y="180" class="sub">• RJ-45 原生 RTSP</text>
+  <text x="34" y="198" class="sub">• H.264 編碼(可選 9Hz)</text>
+  <text x="34" y="216" class="sub">• &lt;430 g 無人機可載</text>
+  <text x="34" y="232" class="sub">對照:FLIR A50/A70(519g,H.264/MJPEG)</text>
+
+  <!-- Ethernet link -->
+  <path class="flow" d="M214,165 L300,165"/>
+  <text x="216" y="150" class="lbl" font-weight="bold">機內 Ethernet (GbE)</text>
+  <text x="216" y="184" class="sub">RTSP / RTP · H.264</text>
+
+  <!-- KL730 big box -->
+  <rect class="box" x="300" y="78" width="600" height="320" rx="10" fill="#fcfcfc"/>
+  <text x="316" y="100" class="h" fill="#e8821a">Kneron KL730（機上）</text>
+  <text x="760" y="100" class="sub">NPU 3.6 eTOPS · 4×Cortex-A55 跑 Linux</text>
+
+  <!-- S1 decode -->
+  <rect class="box" x="316" y="116" width="250" height="62" rx="8"/>
+  <text x="326" y="136" class="lbl" font-weight="bold">S1 取流 + HEVC/H.264 解碼</text>
+  <text x="326" y="153" class="sub">GStreamer rtspsrc→depay→&lt;hwdec&gt;→appsink</text>
+  <text x="326" y="169" class="sub">⚠ 須查 KL730 HW 解碼;無則攝影機改 H.264/MJPEG</text>
+
+  <!-- LatestFrameBuffer -->
+  <rect class="box" x="316" y="190" width="250" height="50" rx="8"/>
+  <text x="326" y="210" class="lbl" font-weight="bold">最新幀緩衝(單槽)</text>
+  <text x="326" y="227" class="sub">新覆舊 · 丟舊幀 → 延遲有界(即時核心)</text>
+
+  <!-- S2 preprocess -->
+  <rect class="box" x="316" y="252" width="250" height="46" rx="8"/>
+  <text x="326" y="272" class="lbl" font-weight="bold">S2 前處理</text>
+  <text x="326" y="289" class="sub">resize 640/896 · x/256−0.5 · NCHW</text>
+
+  <!-- S3 NPU -->
+  <rect class="box npu" x="316" y="310" width="250" height="50" rx="8"/>
+  <text x="326" y="330" class="lbl" font-weight="bold">S3 NPU 推論(NEF)</text>
+  <text x="326" y="347" class="sub">640@43fps / 896@21fps · 零 CPU fallback</text>
+  <text x="540" y="306" text-anchor="end" class="tag" fill="#e8821a">NPU</text>
+
+  <!-- right column inside KL730: S4 S5 -->
+  <rect class="box cpu" x="600" y="190" width="282" height="50" rx="8"/>
+  <text x="610" y="210" class="lbl" font-weight="bold">S4 decode + NMS</text>
+  <text x="610" y="227" class="sub">9 raw 張量 → 框(YOLOX 解碼)</text>
+  <text x="872" y="186" text-anchor="end" class="tag" fill="#4a78b5">A55 CPU</text>
+
+  <rect class="box cpu" x="600" y="252" width="282" height="50" rx="8"/>
+  <text x="610" y="272" class="lbl" font-weight="bold">S5 Tracker(ByteTrack)</text>
+  <text x="610" y="289" class="sub">UAV track id · 跨幀平滑 · 容忍漏幀</text>
+  <text x="872" y="248" text-anchor="end" class="tag" fill="#4a78b5">A55 CPU</text>
+
+  <!-- internal flows -->
+  <path class="flow" d="M441,178 L441,190"/>
+  <path class="flow" d="M441,240 L441,252"/>
+  <path class="flow" d="M441,298 L441,310"/>
+  <path class="flow" d="M566,335 C585,335 585,215 600,215"/>
+  <text x="556" y="270" class="sub" transform="rotate(0)">NPU→A55</text>
+  <path class="flow" d="M741,240 L741,252"/>
+
+  <!-- Outputs -->
+  <path class="flow" d="M882,215 L960,200"/>
+  <rect class="box out" x="960" y="120" width="196" height="84" rx="8"/>
+  <text x="970" y="142" class="lbl" font-weight="bold">飛控 / 任務電腦</text>
+  <text x="970" y="161" class="sub">UART → MAVLink</text>
+  <text x="970" y="178" class="sub">類別 / 框 / 信心 / track id</text>
+  <text x="970" y="195" class="sub">(低頻寬,即時)</text>
+
+  <path class="flow" d="M882,277 L960,300"/>
+  <rect class="box out" x="960" y="244" width="196" height="84" rx="8"/>
+  <text x="970" y="266" class="lbl" font-weight="bold">圖傳 / 地面站</text>
+  <text x="970" y="285" class="sub">Ethernet → RTSP overlay</text>
+  <text x="970" y="302" class="sub">H.264,人工確認用</text>
+  <text x="970" y="319" class="sub">(可選)</text>
+
+  <!-- legend / footer -->
+  <rect x="24" y="430" width="1132" height="106" rx="8" fill="#f7f7f7" stroke="#ddd"/>
+  <text x="40" y="454" class="h">分工與要點</text>
+  <rect x="40" y="466" width="14" height="14" class="npu"/><text x="60" y="478" class="sub">NPU:只算到 9 個 raw 張量(43fps@640)</text>
+  <rect x="320" y="466" width="14" height="14" class="cpu"/><text x="340" y="478" class="sub">A55 CPU:解碼/decode+NMS/tracker(都不在 NPU)</text>
+  <rect x="700" y="466" width="14" height="14" class="cam"/><text x="720" y="478" class="sub">熱像 IP 相機:RTSP 源</text>
+  <text x="40" y="502" class="sub">• 即時紀律:解碼率與推論率解耦,單槽最新幀緩衝丟舊幀 → 延遲不雪崩(已 loopback 實測:H.265/RTP ~85幀/4s)。</text>
+  <text x="40" y="522" class="sub">• codec 槓桿:機內 Ethernet 頻寬充裕 → codec 由「KL730 解得動嗎」決定;無 HW HEVC 就讓相機輸出 H.264/MJPEG 卸載 A55。</text>
+</svg>

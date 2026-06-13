@@ -4,6 +4,10 @@
 > 達成即時 UAV 辨識。含架構、即時紀律、延遲預算、實測驗證、風險。
 > 程式:`firmware/capture/rtsp_source.py`、`firmware/realtime_loop.py`;驗證:`firmware/test_rtsp_loopback.py`
 
+![RTSP 即時辨識架構圖](rtsp-realtime-arch.png)
+
+> 架構圖原始檔 `rtsp-realtime-arch.svg`(可編輯);PNG 由 chrome-headless 轉出。
+
 ## 1. 拓樸(✅ 已定案:A — 機上 IP 攝影機 + 機內 Ethernet)
 
 **確認 (2026-06):攝影機裝在機上,經機內 Ethernet 連接(IP camera 出 RTSP),KL730 機上拉流。**
@@ -30,6 +34,23 @@ H.265 主要好處是**省頻寬**。但**機內 Ethernet 頻寬充裕**(GbE 對
 
 額外好處:**MJPEG / intra-only 無 B-frame 延遲**,逐幀獨立 → 延遲比 H.265 更低,對追快速 UAV 有利。
 `RtspSource`(ffmpeg auto-detect codec)不需改即支援 H.264/MJPEG。
+
+## 1.2 相機選型(真實產品範例,2026-06 查證)
+
+情境硬條件:熱像 LWIR + 原生 Ethernet/IP 出 RTSP + 無人機可載(輕) + 支援 H.264/MJPEG(配合 §1.1)。
+
+| 產品 | 解析度 | 介面 / codec | 重量 | 備註 |
+|---|---|---|---|---|
+| **Workswell WIRIS Pro**(推薦) | 640×512 @30Hz | RJ-45 原生 **RTSP + H.264** | **<430 g** | 本來就是無人機 payload;Ethernet 為**選配**,下單須指定含 RJ-45+API 版本;功耗/價格官網未列 |
+| FLIR A50 / A70 | 464×348 / **640×480** @30Hz | GigE Vision + **RTSP H.264/MJPEG**(Advanced 版)+ PoE | 519 g | codec 彈性最好、整合最省事,但偏重、解析度略低 |
+| Hikvision DS-2TD2167T(對照) | 640×512 @25fps | RTSP **H.265/H.264/MJPEG** + PoE | **1.77 kg** | 純對照:成熟 IP 熱像串流堆疊,但太重,屬地面/桿上 |
+| InfiRay RJ45 ASIC 模組 | 640×512 | RJ-45 板載 ASIC 壓 H.264/H.265 出 RTSP | 未查證(core 21×21mm) | 概念最貼本案、理論最輕,但重量/功耗/出口管制未查證 |
+
+⚠️ **避雷:FLIR Boson + Ethernet Bridge(BoB)走 GigE Vision (GenICam),不是標準 RTSP** —— KL730 端不能直接當一般 RTSP 拉,除非自加轉碼板。Boson core 雖極輕(7.5g)但不合「接 RTSP」前提。
+
+**推薦 Workswell WIRIS Pro**:唯一同時滿足全部硬條件且已商品化(<430g、640×512、RJ-45 原生 RTSP+H.264;機內頻寬充裕剛好用得上 H.264 輕 codec,KL730 直接拉流不必自製轉碼板)。
+
+> 出口管制:≥9Hz LWIR 多落 EAR;各品牌多提供 9Hz 版。採購地域要查(見 PLAN R3)。
 
 ## 2. 🔑 最關鍵未知:KL730 是否有硬體 H.265 解碼 (VPU)
 
