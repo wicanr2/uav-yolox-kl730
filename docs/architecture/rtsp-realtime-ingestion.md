@@ -4,23 +4,39 @@
 > 達成即時 UAV 辨識。含架構、即時紀律、延遲預算、實測驗證、風險。
 > 程式:`firmware/capture/rtsp_source.py`、`firmware/realtime_loop.py`;驗證:`firmware/test_rtsp_loopback.py`
 
-## 1. 拓樸(先確認,決定延遲量級)
+## 1. 拓樸(✅ 已定案:A — 機上 IP 攝影機 + 機內 Ethernet)
+
+**確認 (2026-06):攝影機裝在機上,經機內 Ethernet 連接(IP camera 出 RTSP),KL730 機上拉流。**
 
 | 拓樸 | RTSP 來源 | 延遲 |
 |---|---|---|
-| A. 機上 IP 熱像儀 | 攝影機經機上 Ethernet 出 RTSP,KL730 機上拉流 | 低(~80-130ms) |
-| B. 地面端處理下行 | 無人機 H.265 經 RF/4G/5G 下傳,地面 KL730 收 RTSP | 高且抖(~150-350ms,網路主宰) |
-| (對照) C. MIPI/USB 直連 | 非 RTSP,PLAN §4.1 原方案 | 最低 |
+| **A. 機上 IP 攝影機(本案)** | 攝影機經機內 Ethernet 出 RTSP,KL730 機上拉流 | **低(~80-130ms)** |
+| B. 地面端處理下行 | 無人機經 RF/4G/5G 下傳,地面 KL730 收 RTSP | 高且抖(~150-350ms) |
+| (對照) C. MIPI/USB 直連 | 非 RTSP | 最低 |
 
-> **機上即時偵測,MIPI/USB 直連 > RTSP**(RTSP/H.265 多了編碼+網路+解碼一圈)。
-> RTSP 只在「源本來就是網路串流」(IP 攝影機 / 地面收下行) 才划算。
+拓樸 A 的兩個結果:
+- **網路風險基本消失**:機內有線 Ethernet(常見 GbE)→ 低延遲、低抖動、幾乎無丟包。延遲主宰項是**編碼+解碼**,不是網路。
+- **RTSP 接流躲不掉**:攝影機是 Ethernet IP cam(非 MIPI sensor),「改 MIPI 直連」**不適用** —— RTSP/RTP 解碼是唯一路徑(本檔 `RtspSource` 即此)。
+
+## 1.1 🔑 codec 選擇 = 卸載 A55 的槓桿(本案關鍵決策)
+
+H.265 主要好處是**省頻寬**。但**機內 Ethernet 頻寬充裕**(GbE 對 640×512@30 綽綽有餘),
+所以 codec 該由「**KL730 解得動嗎**」決定,不是頻寬:
+
+| 若 KL730… | 攝影機輸出 | 理由 |
+|---|---|---|
+| **有** HW HEVC 解碼 | H.265 | 卸載 A55 |
+| **沒有** HW HEVC | **H.264**(較輕)或 **MJPEG**(解碼極輕) | 用充裕本機頻寬換稀缺 A55 算力 |
+
+額外好處:**MJPEG / intra-only 無 B-frame 延遲**,逐幀獨立 → 延遲比 H.265 更低,對追快速 UAV 有利。
+`RtspSource`(ffmpeg auto-detect codec)不需改即支援 H.264/MJPEG。
 
 ## 2. 🔑 最關鍵未知:KL730 是否有硬體 H.265 解碼 (VPU)
 
 H.265 即時解碼很重。**有 HW HEVC decode** → 卸載 A55(A55 留給 decode+NMS+tracker);
 **沒有** → 軟解吃掉 A55,640 都未必撐 30fps。KL730 標榜「4K@60 視訊處理 + ISP」,
 但要確認那是「**壓縮串流解碼**」還是「**RAW sensor 的 ISP**」。**動手前查 datasheet/BSP**。
-若無 HW HEVC:① 改 H.264(較輕)② 加帶 VPU 的 companion ③ 走 MIPI 直連避開網路視訊。
+若無 HW HEVC(本案拓樸 A 的解法,見 §1.1):**因機內 Ethernet 頻寬充裕,直接把 IP 攝影機改設 H.264 或 MJPEG 輸出** → 軟解成本大降,不必加硬體。(MIPI 直連不適用 — 本案是 IP cam。)
 
 ## 3. 管線(解耦分段 + 即時紀律)
 
@@ -97,7 +113,11 @@ tracker 維持 UAV 身分、平滑軌跡,還能「每 N 幀偵測、中間追蹤
 3. **網路抖動/掉包**(拓樸 B)— 延遲主宰,考慮低延遲 profile / FEC。
 4. **熱影像串流格式** — 已 AGC 後 8-bit 還是 16-bit?影響前處理。
 
-## 9. 待你確認
+## 9. 現況與下一步
 
-- **拓樸 A 還是 B**?(決定延遲預算與是否該乾脆走 MIPI 直連)
-- 若拓樸 A 且攝影機支援 MIPI/USB → 建議直連,跳過 RTSP/H.265 整圈。
+- ✅ **拓樸已定案:A(機上 IP 攝影機 + 機內 Ethernet)**。網路風險低,RTSP 接流為唯一路徑。
+- ⏳ **待查**:KL730 是否有 HW HEVC 解碼(查 BSP `gst-inspect` 找 v4l2 HW decoder)。
+  - 有 → 攝影機維持 H.265。
+  - 無 → 把攝影機改設 **H.264 / MJPEG**(機內頻寬足,§1.1),`RtspSource` 不需改。
+- ⏳ **待補**:把 ByteTrack 接進 `realtime_loop.py` 的 tracker 槽,完成「偵測 + 追蹤」即時鏈。
+- ⏳ **待測(有板後)**:`detector` 換 board backend,量機上真實端到端延遲與 fps。
