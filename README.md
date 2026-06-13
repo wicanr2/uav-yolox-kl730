@@ -42,7 +42,7 @@
 - **L1 [問題與目標](docs/KB/01-問題與目標.md)** — 這專案要解決什麼、為什麼這樣設計(全白話)
 - **L2 [核心概念](docs/KB/02-核心概念.md)** — 物件偵測/YOLO/NPU/量化 六個關鍵概念(比喻講解)
 - **L3 [技術鏈總覽](docs/KB/03-技術鏈總覽.md)** — 從資料到無人機的七站,每個檔案/指令在哪
-- **L4 深入** — [YOLOX 原理](docs/yolox-explained.md) · [Kneron NPU 部署筆記](docs/kneron-npu-deploy-notes.md)
+- **L4 深入** — [YOLOX 原理](docs/yolox-explained.md) · [Kneron NPU 部署筆記](docs/kneron-npu-deploy-notes.md) · [RTSP 即時辨識架構](docs/architecture/rtsp-realtime-ingestion.md)
 - **L5 實戰** — [完整實驗過程與踩坑](docs/session-walkthrough.md) · [規劃與風險 PLAN](PLAN.md)
 - **附錄** — [名詞解釋 glossary](docs/glossary.md) · [術語表 CONTEXT](CONTEXT.md)
 
