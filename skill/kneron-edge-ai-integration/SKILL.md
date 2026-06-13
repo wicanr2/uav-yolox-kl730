@@ -1,6 +1,6 @@
 ---
 name: kneron-edge-ai-integration
-description: 把物件偵測模型 (YOLO/YOLOX) 整合部署到耐能 Kneron edge AI NPU (KL730/KL720/KL630) 的完整 SOP 與必踩雷清單。涵蓋:kneron-mmdetection docker 環境建置 (版本鎖定 + 6 個 build 坑)、資料集轉 COCO、ONNX 匯出 (opset 11)、Kneron toolchain 量化編譯成 NEF、decode+NMS 後處理、逐 channel 量化驗收。**核心價值 = 一個會讓人 debug 一整天的量化崩潰根因**:`--skip-postprocess` 的 raw-logit 輸出必須用 `mmse` range method,不能用 detection 預設的 `percentage=1.0`(會把量化範圍撐爆→輸出崩潰成 per-channel 常數)。觸發條件:使用者提到「把 YOLO/模型跑在耐能/Kneron NPU 上」「KL730/KL720 部署」「ONNX 轉 NEF」「Kneron toolchain 量化」「NPU 量化後輸出全 0/崩潰/退化」「kneron-mmdetection 環境」「edge AI 晶片整合物件偵測」「熱影像/影像辨識上邊緣 AI 晶片」「量化掉精度怎麼救」。也適用於規劃「算法+硬體系統整合」型專案 (非算法研發)。
+description: 把物件偵測模型 (YOLOX) 整合部署到耐能 Kneron NPU (KL730/720/630) 的 SOP 與必踩雷。核心:量化崩潰根因 (raw-logit 須用 mmse range method,非 percentage=1.0)。觸發:「YOLO/模型跑在耐能/Kneron NPU」「KL730/720 部署」「ONNX 轉 NEF」「Kneron toolchain 量化」「NPU 量化後輸出崩潰/全0」「kneron-mmdetection 環境」「edge AI 晶片整合物件偵測」。完整 SOP 與觸發見內文。
 ---
 
 # Kneron Edge AI 整合部署 SOP
