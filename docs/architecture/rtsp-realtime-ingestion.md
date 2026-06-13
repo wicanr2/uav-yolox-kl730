@@ -39,6 +39,10 @@ H.265 主要好處是**省頻寬**。但**機內 Ethernet 頻寬充裕**(GbE 對
 
 情境硬條件:熱像 LWIR + 原生 Ethernet/IP 出 RTSP + 無人機可載(輕) + 支援 H.264/MJPEG(配合 §1.1)。
 
+<img src="../images/cameras/wiris-pro-hero.png" width="360" alt="Workswell WIRIS Pro">
+
+*推薦範例:Workswell WIRIS Pro(© Workswell,產品照僅技術參考用,出處見 `docs/images/cameras/CREDITS.md`)。*
+
 | 產品 | 解析度 | 介面 / codec | 重量 | 備註 |
 |---|---|---|---|---|
 | **Workswell WIRIS Pro**(推薦) | 640×512 @30Hz | RJ-45 原生 **RTSP + H.264** | **<430 g** | 本來就是無人機 payload;Ethernet 為**選配**,下單須指定含 RJ-45+API 版本;功耗/價格官網未列 |
